@@ -1,0 +1,24 @@
+[project]
+name = "alphacam-primitive"
+version = "1.0.0"
+description = "Python modernization of the Alphacam Primitive macro. Geometry grouping, ordering, in/out logic, and measurement routines rewritten from VB6 into a clean, testable CNC-automation library."
+authors = [
+    { name = "Giorgio" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+
+[project.scripts]
+alphacam-primitive = "alphacam_primitive.cli:main"
+
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["alphacam_primitive*"]
