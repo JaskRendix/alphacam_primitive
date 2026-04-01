@@ -37,6 +37,10 @@ def compute_inout_points(
     Returns:
         (in_x, in_y, out_x, out_y)
     """
+
+    if offsets.in_dx == offsets.out_dx and offsets.in_dy == offsets.out_dy:
+        raise ValueError("in/out offsets are identical — points will coincide")
+
     # Inside point: along diagonal from min to max with inside offsets
     in_x = path.max_x - offsets.in_dx
     in_y = path.max_y - offsets.in_dy

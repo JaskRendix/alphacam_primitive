@@ -9,7 +9,7 @@ from .exporters.svg import export_measurement_points_svg, export_rectangles_svg
 from .geometry import PathBBox
 from .grouping import order_geo
 from .inout import InOutOffsets, compute_inout_points
-from .measurement import compute_measurement_points
+from .measurement import MeasurementOffsets, compute_measurement_points
 
 
 def _load_paths_from_json(path: Path) -> list[PathBBox]:
@@ -24,16 +24,19 @@ def _load_paths_from_json(path: Path) -> list[PathBBox]:
     data = json.loads(path.read_text())
     paths: list[PathBBox] = []
     for item in data:
-        paths.append(
-            PathBBox(
-                name=item["name"],
-                min_x=item["min_x"],
-                min_y=item["min_y"],
-                max_x=item["max_x"],
-                max_y=item["max_y"],
-                length=item["length"],
+        try:
+            paths.append(
+                PathBBox(
+                    name=item["name"],
+                    min_x=item["min_x"],
+                    min_y=item["min_y"],
+                    max_x=item["max_x"],
+                    max_y=item["max_y"],
+                    length=item["length"],
+                )
             )
-        )
+        except KeyError as e:
+            raise SystemExit(f"Missing field {e} in path entry {item}") from None
     return paths
 
 
@@ -78,14 +81,17 @@ def cmd_export_dxf(args: argparse.Namespace) -> None:
     paths = _load_paths_from_json(args.input)
 
     if args.measure:
+        if args.geo_min is None or args.geo_max is None:
+            raise SystemExit("--geo-min and --geo-max are required with --measure")
+
         ordered, _ = order_geo(paths, prefer_y=args.prefer_y)
-        measurement, _ = compute_measurement_points(
+        measurement = compute_measurement_points(
             paths=paths,
             ordered_indices=ordered,
             geo_min=args.geo_min,
             geo_max=args.geo_max,
             count_per_band=args.count_per_band,
-            delta_measure=args.delta_measure,
+            offsets=MeasurementOffsets(dx=args.measure_dx, dy=args.measure_dy),
             prefer_y=args.prefer_y,
         )
         export_measurement_points(measurement, args.output)
@@ -97,14 +103,18 @@ def cmd_export_svg(args: argparse.Namespace) -> None:
     paths = _load_paths_from_json(args.input)
 
     if args.measure:
+
+        if args.geo_min is None or args.geo_max is None:
+            raise SystemExit("--geo-min and --geo-max are required with --measure")
+
         ordered, _ = order_geo(paths, prefer_y=args.prefer_y)
-        measurement, _ = compute_measurement_points(
+        measurement = compute_measurement_points(
             paths=paths,
             ordered_indices=ordered,
             geo_min=args.geo_min,
             geo_max=args.geo_max,
             count_per_band=args.count_per_band,
-            delta_measure=args.delta_measure,
+            offsets=MeasurementOffsets(dx=args.measure_dx, dy=args.measure_dy),
             prefer_y=args.prefer_y,
         )
         export_measurement_points_svg(measurement, args.output)
@@ -116,25 +126,19 @@ def cmd_measure(args: argparse.Namespace) -> None:
     paths = _load_paths_from_json(args.input)
     ordered, _ = order_geo(paths, prefer_y=args.prefer_y)
 
-    geo_min = args.geo_min
-    geo_max = args.geo_max
-    count_per_band = args.count_per_band
-    delta_measure = args.delta_measure
-
-    measurement, count_g = compute_measurement_points(
+    measurement = compute_measurement_points(
         paths=paths,
         ordered_indices=ordered,
-        geo_min=geo_min,
-        geo_max=geo_max,
-        count_per_band=count_per_band,
-        delta_measure=delta_measure,
+        geo_min=args.geo_min,
+        geo_max=args.geo_max,
+        count_per_band=args.count_per_band,
+        offsets=MeasurementOffsets(dx=args.measure_dx, dy=args.measure_dy),
         prefer_y=args.prefer_y,
     )
 
     out = {
-        "count_g": count_g,
         "measurement_points": {
-            str(k): {"x": v.x, "y": v.y} for k, v in measurement.items()
+            str(k): {"x": v.x, "y": v.y, "band": v.band} for k, v in measurement.items()
         },
     }
     if args.output:
@@ -184,7 +188,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_meas.add_argument("--geo-min", type=float, required=True)
     p_meas.add_argument("--geo-max", type=float, required=True)
     p_meas.add_argument("--count-per-band", type=int, default=1)
-    p_meas.add_argument("--delta-measure", type=float, default=0.0)
+    p_meas.add_argument("--measure-dx", type=float, default=0.0)
+    p_meas.add_argument("--measure-dy", type=float, default=0.0)
     p_meas.set_defaults(func=cmd_measure)
 
     # export-dxf
@@ -202,7 +207,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_dxf.add_argument("--geo-min", type=float)
     p_dxf.add_argument("--geo-max", type=float)
     p_dxf.add_argument("--count-per-band", type=int, default=1)
-    p_dxf.add_argument("--delta-measure", type=float, default=0.0)
+    p_dxf.add_argument("--measure-dx", type=float, default=0.0)
+    p_dxf.add_argument("--measure-dy", type=float, default=0.0)
     p_dxf.set_defaults(func=cmd_export_dxf)
 
     # export-svg
@@ -216,7 +222,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_svg.add_argument("--geo-min", type=float)
     p_svg.add_argument("--geo-max", type=float)
     p_svg.add_argument("--count-per-band", type=int, default=1)
-    p_svg.add_argument("--delta-measure", type=float, default=0.0)
+    p_svg.add_argument("--measure-dx", type=float, default=0.0)
+    p_svg.add_argument("--measure-dy", type=float, default=0.0)
     p_svg.set_defaults(func=cmd_export_svg)
 
     return parser
