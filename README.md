@@ -132,6 +132,19 @@ alphacam-primitive export-svg --input paths.json --measure --output meas.svg
 
 ---
 
+## Tools
+
+### Web viewer
+A small static viewer lives in the `viewer/` folder.  
+It loads exported SVG files and lets you pan and zoom in the browser.  
+Useful for checking geometry without CAD software.
+
+### Viewer tests
+The viewer has simple browser‑based tests under `viewer/tests/`.  
+Open `test.html` in a browser to run them.
+
+---
+
 ## **Tests**
 
 ```
