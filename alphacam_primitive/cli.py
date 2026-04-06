@@ -11,6 +11,11 @@ from .grouping import order_geo
 from .inout import InOutOffsets, compute_inout_points
 from .measurement import MeasurementOffsets, compute_measurement_points
 
+try:
+    import uvicorn
+except ImportError:
+    uvicorn = None
+
 
 def _load_paths_from_json(path: Path) -> list[PathBBox]:
     """
@@ -147,6 +152,21 @@ def cmd_measure(args: argparse.Namespace) -> None:
         print(json.dumps(out, indent=2))
 
 
+def cmd_serve(args):
+    if uvicorn is None:
+        raise SystemExit(
+            "FastAPI/uvicorn not installed. Install with:\n"
+            "  pip install 'alphacam-primitive[api]'"
+        )
+
+    uvicorn.run(
+        "alphacam_primitive.api:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="alphacam-primitive",
@@ -225,6 +245,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_svg.add_argument("--measure-dx", type=float, default=0.0)
     p_svg.add_argument("--measure-dy", type=float, default=0.0)
     p_svg.set_defaults(func=cmd_export_svg)
+
+    # serve
+    p_serve = sub.add_parser(
+        "serve", help="Start the FastAPI server (requires the [api] extra)."
+    )
+    p_serve.add_argument("--host", default="127.0.0.1")
+    p_serve.add_argument("--port", type=int, default=8000)
+    p_serve.add_argument(
+        "--reload", action="store_true", help="Enable auto-reload (development only)."
+    )
+    p_serve.set_defaults(func=cmd_serve)
 
     return parser
 

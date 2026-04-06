@@ -6,7 +6,7 @@ This project extracts the core geometry and sequencing logic from the original V
 
 https://github.com/grakh/alphacam
 
-The goal is simple: preserve the useful logic, remove the dependency on Alphacam, and provide a clean, testable, portable library.
+The goal is to preserve the useful logic, remove the dependency on Alphacam, and provide a clean, testable, portable library.
 
 The original macro was built around VB6 forms, Alphacam COM calls, and binary `.amb` packages. The logic was tightly coupled to the Alphacam environment and could not be reused or tested outside it.  
 This rewrite isolates the parts that matter:
@@ -56,6 +56,9 @@ A command‑line interface that mirrors the structure of the original macro:
 - `export-dxf`  
 - `export-svg`  
 
+### **API**
+An optional FastAPI server that exposes the same functionality over HTTP.
+
 ---
 
 ## **What this project does not include**
@@ -74,31 +77,21 @@ These elements were tied to the Alphacam runtime and had no standalone value.
 
 ---
 
-## **Why this modernization exists**
-
-The original macro contained useful geometry logic, but it was locked inside:
-
-- VB6 modules  
-- binary macro packages  
-- an environment that cannot be tested or reused  
-
-This rewrite extracts the logic into a clean Python package with:
-
-- explicit data structures  
-- deterministic behavior  
-- full test coverage  
-- no external dependencies  
-- a simple CLI  
-- DXF/SVG output for inspection  
-
-The result is a small, focused library that preserves the functional core of the original macro without the constraints of the Alphacam environment.
-
----
-
 ## **Installation**
 
+### CLI only
 ```
-pip install -e .
+pip install alphacam-primitive
+```
+
+### CLI + API
+```
+pip install "alphacam-primitive[api]"
+```
+
+### Development install
+```
+pip install -e .[api]
 ```
 
 ---
@@ -132,12 +125,121 @@ alphacam-primitive export-svg --input paths.json --measure --output meas.svg
 
 ---
 
+## **API usage**
+
+The project includes an optional FastAPI server that exposes the same functionality as the CLI.
+
+Start the server:
+
+```
+alphacam-primitive serve --reload
+```
+
+Or manually:
+
+```
+uvicorn alphacam_primitive.api:app --reload
+```
+
+Interactive API docs:
+
+- Swagger UI → http://localhost:8000/docs  
+- ReDoc → http://localhost:8000/redoc  
+
+---
+
+## **Endpoints**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| **GET** | `/health` | Health check |
+| **POST** | `/order` | Order geometry by X/Y bands |
+| **POST** | `/inout` | Compute in/out points for a single path |
+| **POST** | `/measure` | Compute measurement points along ordered geometry |
+| **POST** | `/export/dxf` | Export rectangles or measurement points to DXF |
+| **POST** | `/export/svg` | Export rectangles or measurement points to SVG |
+
+---
+
+## **Request formats**
+
+### `/order`
+```json
+[
+  {"name": 1, "min_x": 0, "min_y": 0, "max_x": 10, "max_y": 5, "length": 30},
+  {"name": 2, "min_x": 20, "min_y": 0, "max_x": 30, "max_y": 5, "length": 30}
+]
+```
+
+### `/inout`
+```json
+{
+  "path": {"name": 1, "min_x": 0, "min_y": 0, "max_x": 10, "max_y": 5, "length": 30},
+  "in_dx": 1,
+  "in_dy": 2,
+  "out_dx": 3,
+  "out_dy": 4
+}
+```
+
+### `/measure`
+```json
+{
+  "paths": [...],
+  "geo_min": 0,
+  "geo_max": 40,
+  "count_per_band": 2,
+  "measure_dx": 1.0,
+  "measure_dy": 0.5
+}
+```
+
+### `/export/dxf` and `/export/svg`
+```json
+{
+  "paths": [...],
+  "measure": true,
+  "geo_min": 0,
+  "geo_max": 40,
+  "count_per_band": 2
+}
+```
+
+Both endpoints return a downloadable file.
+
+---
+
+## **Examples**
+
+### Order geometry
+```
+curl -X POST http://localhost:8000/order \
+     -H "Content-Type: application/json" \
+     -d @paths.json
+```
+
+### Compute in/out points
+```
+curl -X POST http://localhost:8000/inout \
+     -H "Content-Type: application/json" \
+     -d '{"path": {"name":1,"min_x":0,"min_y":0,"max_x":10,"max_y":5,"length":30}}'
+```
+
+### Export SVG
+```
+curl -X POST http://localhost:8000/export/svg \
+     -H "Content-Type: application/json" \
+     -d @paths.json \
+     -o output.svg
+```
+
+---
+
 ## Tools
 
 ### Web viewer
 A small static viewer lives in the `viewer/` folder.  
-It loads exported SVG files and lets you pan and zoom in the browser.  
-Useful for checking geometry without CAD software.
+It loads exported SVG files and lets you pan and zoom in the browser.
 
 ### Viewer tests
 The viewer has simple browser‑based tests under `viewer/tests/`.  
@@ -151,4 +253,4 @@ Open `test.html` in a browser to run them.
 pytest
 ```
 
-All modules are covered by unit tests, including the CLI and exporters.
+All modules are covered by unit tests, including the CLI, API, geometry logic, and exporters.

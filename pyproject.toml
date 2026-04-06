@@ -2,12 +2,18 @@
 name = "alphacam-primitive"
 version = "1.0.0"
 description = "Python modernization of the Alphacam Primitive macro. Geometry grouping, ordering, in/out logic, and measurement routines rewritten from VB6 into a clean, testable CNC-automation library."
-authors = [
-    { name = "Giorgio" }
-]
+authors = [{ name = "Giorgio" }]
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
+
+[project.optional-dependencies]
+api = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic"
+]
 
 [project.scripts]
 alphacam-primitive = "alphacam_primitive.cli:main"
