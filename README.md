@@ -81,12 +81,12 @@ These elements were tied to the Alphacam runtime and had no standalone value.
 
 ### CLI only
 ```
-pip install alphacam-primitive
+pip install alphacam-primitive # not yet published to PyPI
 ```
 
 ### CLI + API
 ```
-pip install "alphacam-primitive[api]"
+pip install "alphacam-primitive[api]" # not yet published to PyPI
 ```
 
 ### Development install
