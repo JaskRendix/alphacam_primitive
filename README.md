@@ -1,79 +1,100 @@
 # **alphacam‑primitive**
 
-A modern Python rewrite of the legacy *Primitive* Alphacam macro.
+A modern, fully testable Python rewrite of the legacy *Primitive* Alphacam macro.
 
-This project extracts the core geometry and sequencing logic from the original VB6/VBA codebase:
+This project extracts the useful geometry and sequencing logic from the original VB6/VBA codebase:
 
-https://github.com/grakh/alphacam
+> [https://github.com/grakh/alphacam](https://github.com/grakh/alphacam)
 
-The goal is to preserve the useful logic, remove the dependency on Alphacam, and provide a clean, testable, portable library.
+The goal is simple:
 
-The original macro was built around VB6 forms, Alphacam COM calls, and binary `.amb` packages. The logic was tightly coupled to the Alphacam environment and could not be reused or tested outside it.  
-This rewrite isolates the parts that matter:
+- preserve the valuable logic  
+- remove the dependency on Alphacam  
+- expose everything as a clean, portable Python library  
+- provide a CLI and optional API  
+- support visual debugging through DXF/SVG exporters  
 
-- geometry grouping  
-- geometry ordering  
-- in/out point calculation  
-- measurement point placement  
-
-Everything else (UI, COM, tool selection, layer visibility, operation management) is intentionally left out.
+The rewrite isolates the core algorithms and removes all Alphacam‑specific UI, COM, and macro packaging.
 
 ---
 
-## **What this project contains**
+## **Features**
 
-### **Geometry model**
-A minimal representation of a path as a bounding box:
+### Geometry model  
+A minimal `PathBBox` structure representing each geometry by:
 
 - `min_x`, `min_y`  
 - `max_x`, `max_y`  
 - `length`  
 
-This matches how the original VB code used geometry.
+This mirrors how the original VB macro reasoned about geometry.
 
-### **Grouping and ordering**
-A faithful rewrite of the VB logic that sorted and grouped geometry by X or Y bands.  
-The behavior is deterministic and covered by tests.
+---
 
-### **In/out point calculation**
-A simplified version of the VB `IntersectWithLine` logic.  
-The original macro used bounding boxes for these calculations, so the rewrite does the same.
+### Grouping & ordering  
+Deterministic grouping and ordering of geometry into X/Y bands.  
+The behavior matches the original macro and is fully covered by tests.
 
-### **Measurement points**
-The VB macro placed measurement points along diagonal intersections.  
-The rewrite follows the same rules and exposes the result as structured data.
+---
 
-### **Exporters**
-DXF and SVG exporters for rectangles and measurement points.  
-These allow inspection and downstream use without Alphacam.
+### In/out point calculation  
+A simplified and predictable version of the VB `IntersectWithLine` logic.  
+The original macro used bounding boxes — this rewrite does the same.
 
-### **CLI**
-A command‑line interface that mirrors the structure of the original macro:
+---
+
+### Measurement points  
+Placement of measurement points along diagonal intersections, following the same rules as the VB macro.
+
+---
+
+### Exporters  
+Two export formats:
+
+- **DXF** — rectangles and measurement points  
+- **Unified SVG** — rectangles, in/out points, measurement points, measurement lines, optional band overlays  
+
+The unified SVG exporter is ideal for debugging and visualization.
+
+---
+
+### CLI  
+A command‑line interface mirroring the structure of the original macro:
 
 - `order`  
 - `inout`  
 - `measure`  
 - `export-dxf`  
 - `export-svg`  
-
-### **API**
-An optional FastAPI server that exposes the same functionality over HTTP.
+- `serve` (API server)
 
 ---
 
-## **What this project does not include**
+### API (optional)  
+A FastAPI server exposing the same functionality over HTTP.
 
-The following parts of the original macro are not reproduced:
+---
 
-- VB6 forms (`frmMain.frm`)  
-- menu registration (`Events.bas`)  
+### Viewer  
+A lightweight browser viewer (in `viewer/`) for inspecting exported SVG files.  
+Includes pan/zoom and optional overlays.
+
+Viewer tests are manual and live under `viewer/tests/`.
+
+---
+
+## **What’s intentionally *not* included**
+
+This project does **not** attempt to recreate Alphacam’s UI or COM integration:
+
+- VB6 forms  
 - Alphacam COM calls (`Drw`, `Geo`, `MD`, `App`)  
 - tool selection  
 - layer visibility  
-- operation creation or deletion  
-- `.amb` and `.amp` binary macro packages  
+- operation creation  
+- `.amb` / `.amp` macro packaging  
 
-These elements were tied to the Alphacam runtime and had no standalone value.
+These were tightly coupled to Alphacam and not portable.
 
 ---
 
@@ -86,7 +107,7 @@ pip install alphacam-primitive # not yet published to PyPI
 
 ### CLI + API
 ```
-pip install "alphacam-primitive[api]" # not yet published to PyPI
+pip install "alphacam-primitive[api]"
 ```
 
 ### Development install
@@ -113,21 +134,24 @@ alphacam-primitive inout --input paths.json --in-dx 1 --in-dy 2
 alphacam-primitive measure --input paths.json --geo-min 0 --geo-max 60
 ```
 
-### Export rectangles to DXF
+### Export DXF
 ```
 alphacam-primitive export-dxf --input paths.json --output rects.dxf
 ```
 
-### Export measurement points to SVG
+### Export unified SVG
 ```
-alphacam-primitive export-svg --input paths.json --measure --output meas.svg
+alphacam-primitive export-svg --input paths.json --output out.svg
+```
+
+### Export measurement overlays to SVG
+```
+alphacam-primitive export-svg --input paths.json --measure --geo-min 0 --geo-max 60 --output meas.svg
 ```
 
 ---
 
 ## **API usage**
-
-The project includes an optional FastAPI server that exposes the same functionality as the CLI.
 
 Start the server:
 
@@ -141,27 +165,27 @@ Or manually:
 uvicorn alphacam_primitive.api:app --reload
 ```
 
-Interactive API docs:
+Interactive docs:
 
 - Swagger UI → http://localhost:8000/docs  
 - ReDoc → http://localhost:8000/redoc  
 
 ---
 
-## **Endpoints**
+## **API endpoints**
 
 | Method | Path | Description |
 |--------|------|-------------|
 | **GET** | `/health` | Health check |
 | **POST** | `/order` | Order geometry by X/Y bands |
-| **POST** | `/inout` | Compute in/out points for a single path |
-| **POST** | `/measure` | Compute measurement points along ordered geometry |
+| **POST** | `/inout` | Compute in/out points |
+| **POST** | `/measure` | Compute measurement points |
 | **POST** | `/export/dxf` | Export rectangles or measurement points to DXF |
-| **POST** | `/export/svg` | Export rectangles or measurement points to SVG |
+| **POST** | `/export/svg` | Export unified SVG (rectangles, in/out, measurement points/lines) |
 
 ---
 
-## **Request formats**
+## **Example request formats**
 
 ### `/order`
 ```json
@@ -194,7 +218,7 @@ Interactive API docs:
 }
 ```
 
-### `/export/dxf` and `/export/svg`
+### `/export/svg`
 ```json
 {
   "paths": [...],
@@ -205,52 +229,28 @@ Interactive API docs:
 }
 ```
 
-Both endpoints return a downloadable file.
-
 ---
 
-## **Examples**
+## **Viewer**
 
-### Order geometry
-```
-curl -X POST http://localhost:8000/order \
-     -H "Content-Type: application/json" \
-     -d @paths.json
-```
+The `viewer/` folder contains:
 
-### Compute in/out points
-```
-curl -X POST http://localhost:8000/inout \
-     -H "Content-Type: application/json" \
-     -d '{"path": {"name":1,"min_x":0,"min_y":0,"max_x":10,"max_y":5,"length":30}}'
-```
+- `index.html` — the viewer  
+- `viewer.js` — pan/zoom + file loading  
+- `overlays.js` — optional overlays (bands, order, in/out, measurement)  
+- `overlays.css` — overlay styling  
+- manual tests under `viewer/tests/`
 
-### Export SVG
-```
-curl -X POST http://localhost:8000/export/svg \
-     -H "Content-Type: application/json" \
-     -d @paths.json \
-     -o output.svg
-```
-
----
-
-## Tools
-
-### Web viewer
-A small static viewer lives in the `viewer/` folder.  
-It loads exported SVG files and lets you pan and zoom in the browser.
-
-### Viewer tests
-The viewer has simple browser‑based tests under `viewer/tests/`.  
-Open `test.html` in a browser to run them.
+Open `viewer/index.html` in a browser and load any exported SVG.
 
 ---
 
 ## **Tests**
 
+Run the full Python test suite:
+
 ```
 pytest
 ```
 
-All modules are covered by unit tests, including the CLI, API, geometry logic, and exporters.
+All core modules — geometry, grouping, ordering, in/out, measurement, exporters, CLI, and API — are covered by tests.
