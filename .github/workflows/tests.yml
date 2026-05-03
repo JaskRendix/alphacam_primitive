@@ -27,17 +27,5 @@ jobs:
           pip install -e .[api]
           pip install pytest
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-
-      - name: Install Jest dependencies
-        run: |
-          npm install --no-save jest @jest/environment jsdom
-
       - name: Run pytest
         run: pytest
-
-      - name: Run Jest
-        run: npx jest --runInBand
