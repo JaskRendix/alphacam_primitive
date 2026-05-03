@@ -107,7 +107,7 @@ pip install alphacam-primitive # not yet published to PyPI
 
 ### CLI + API
 ```
-pip install "alphacam-primitive[api]"
+pip install "alphacam-primitive[api]" # not yet published to PyPI
 ```
 
 ### Development install
