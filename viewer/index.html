@@ -4,11 +4,19 @@
   <meta charset="utf-8">
   <title>alphacam-primitive viewer</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="overlays.css">
 </head>
 <body>
   <header>
     <h1>alphacam-primitive viewer</h1>
     <input type="file" id="fileInput" accept=".svg">
+
+    <div id="overlay-controls">
+      <label><input type="checkbox" id="show-bands"> Bands</label>
+      <label><input type="checkbox" id="show-order"> Order</label>
+      <label><input type="checkbox" id="show-inout"> In/Out</label>
+      <label><input type="checkbox" id="show-measure"> Measurement</label>
+    </div>
   </header>
 
   <div id="viewport">
@@ -16,5 +24,6 @@
   </div>
 
   <script src="viewer.js"></script>
+  <script src="overlays.js"></script>
 </body>
 </html>

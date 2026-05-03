@@ -1,0 +1,53 @@
+#overlay-controls {
+  margin-top: 10px;
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
+  user-select: none;
+}
+
+#overlay-controls label {
+  cursor: pointer;
+}
+
+.overlay-band {
+  fill: rgba(0, 150, 255, 0.08);
+  stroke: rgba(0, 150, 255, 0.25);
+  stroke-width: 0.5;
+  pointer-events: none;
+}
+
+.overlay-order {
+  fill: #000;
+  font-size: 11px;
+  font-family: sans-serif;
+  pointer-events: none;
+}
+
+.overlay-point-in {
+  fill: #00aa00;
+  stroke: #003300;
+  stroke-width: 0.8;
+  pointer-events: none;
+}
+
+.overlay-point-out {
+  fill: #cc0000;
+  stroke: #330000;
+  stroke-width: 0.8;
+  pointer-events: none;
+}
+
+.overlay-measure-line {
+  stroke: orange;
+  stroke-width: 1.2;
+  stroke-dasharray: 4 2;
+  pointer-events: none;
+}
+
+.overlay-measure-point {
+  fill: orange;
+  stroke: #663300;
+  stroke-width: 0.8;
+  pointer-events: none;
+}

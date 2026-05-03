@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -100 200 100">
+
+  <!-- Touching rectangles (edges align perfectly) -->
+  <g id="rectangles">
+    <rect x="10" y="-90" width="60" height="40" stroke="black" fill="none" />
+    <rect x="70" y="-90" width="60" height="40" stroke="black" fill="none" />
+    <rect x="130" y="-90" width="60" height="40" stroke="black" fill="none" />
+  </g>
+
+  <!-- In/Out points -->
+  <g id="inout">
+    <circle cx="20" cy="-70" r="2" data-type="in" />
+    <circle cx="180" cy="-70" r="2" data-type="out" />
+  </g>
+
+  <!-- Measurement points -->
+  <g id="measure-points">
+    <circle cx="40" cy="-50" r="1.5" data-measure="1" />
+    <circle cx="160" cy="-50" r="1.5" data-measure="1" />
+  </g>
+
+  <!-- Measurement line -->
+  <g id="measure-lines">
+    <line x1="40" y1="-50" x2="160" y2="-50" data-measure="1" />
+  </g>
+
+</svg>

@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .exporters.dxf import export_measurement_points, export_rectangles
-from .exporters.svg import export_measurement_points_svg, export_rectangles_svg
+from .exporters.svg import export_svg_unified
 from .geometry import PathBBox
 from .grouping import order_geo
 from .inout import InOutOffsets, compute_inout_points
@@ -70,13 +71,13 @@ class ExportRequest(BaseModel):
 
 
 @app.get("/health")
-def health():
+def health() -> dict[str, str]:
     """Simple health check endpoint."""
     return {"status": "ok"}
 
 
 @app.post("/order")
-def api_order(paths: list[PathBBoxModel], prefer_y: bool = False):
+def api_order(paths: list[PathBBoxModel], prefer_y: bool = False) -> dict[str, Any]:
     """Order geometries based on bounding boxes."""
     bboxes = [PathBBox(**p.model_dump()) for p in paths]
     ordered, bands = order_geo(bboxes, prefer_y=prefer_y)
@@ -84,7 +85,7 @@ def api_order(paths: list[PathBBoxModel], prefer_y: bool = False):
 
 
 @app.post("/inout")
-def api_inout(req: InOutRequest):
+def api_inout(req: InOutRequest) -> dict[str, Any]:
     """Compute in/out points for a single path."""
     offsets = InOutOffsets(
         in_dx=req.in_dx,
@@ -103,7 +104,7 @@ def api_inout(req: InOutRequest):
 
 
 @app.post("/measure")
-def api_measure(req: MeasureRequest):
+def api_measure(req: MeasureRequest) -> dict[str, dict[str, dict[str, Any]]]:
     """Compute measurement points along ordered geometries."""
     if not req.paths:
         raise HTTPException(status_code=400, detail="No paths provided")
@@ -129,7 +130,7 @@ def api_measure(req: MeasureRequest):
 
 
 @app.post("/export/dxf")
-def api_export_dxf(req: ExportRequest):
+def api_export_dxf(req: ExportRequest) -> FileResponse:
     """Export rectangles or measurement points to DXF."""
     bboxes = [PathBBox(**p.model_dump()) for p in req.paths]
     out_path = "export.dxf"
@@ -156,17 +157,21 @@ def api_export_dxf(req: ExportRequest):
 
 
 @app.post("/export/svg")
-def api_export_svg(req: ExportRequest):
+def api_export_svg(req: ExportRequest) -> FileResponse:
     """Export rectangles or measurement points to SVG."""
     bboxes = [PathBBox(**p.model_dump()) for p in req.paths]
     out_path = "export.svg"
+
+    measurement_points = None
+    measurement_lines = None
 
     if req.measure:
         if req.geo_min is None or req.geo_max is None:
             raise HTTPException(status_code=400, detail="geo_min and geo_max required")
 
         ordered, _ = order_geo(bboxes, prefer_y=req.prefer_y)
-        measurement = compute_measurement_points(
+
+        measurement_points = compute_measurement_points(
             paths=bboxes,
             ordered_indices=ordered,
             geo_min=req.geo_min,
@@ -175,8 +180,21 @@ def api_export_svg(req: ExportRequest):
             offsets=MeasurementOffsets(dx=req.measure_dx, dy=req.measure_dy),
             prefer_y=req.prefer_y,
         )
-        export_measurement_points_svg(measurement, Path(out_path))
-    else:
-        export_rectangles_svg(bboxes, Path(out_path))
+
+        # Optional measurement diagonals
+        measurement_lines = [
+            (p.x, p.y, q.x, q.y)
+            for p, q in zip(
+                list(measurement_points.values())[:-1],
+                list(measurement_points.values())[1:],
+            )
+        ]
+
+    export_svg_unified(
+        paths=bboxes,
+        out_path=Path(out_path),
+        measurement_points=measurement_points,
+        measurement_lines=measurement_lines,
+    )
 
     return FileResponse(out_path, media_type="image/svg+xml")

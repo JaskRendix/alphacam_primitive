@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from .exporters.dxf import export_measurement_points, export_rectangles
-from .exporters.svg import export_measurement_points_svg, export_rectangles_svg
+from .exporters.svg import export_svg_unified
 from .geometry import PathBBox
 from .grouping import order_geo
 from .inout import InOutOffsets, compute_inout_points
@@ -107,13 +107,17 @@ def cmd_export_dxf(args: argparse.Namespace) -> None:
 def cmd_export_svg(args: argparse.Namespace) -> None:
     paths = _load_paths_from_json(args.input)
 
-    if args.measure:
+    # Unified SVG exporter
+    measurement_points = None
+    measurement_lines = None
 
+    if args.measure:
         if args.geo_min is None or args.geo_max is None:
             raise SystemExit("--geo-min and --geo-max are required with --measure")
 
         ordered, _ = order_geo(paths, prefer_y=args.prefer_y)
-        measurement = compute_measurement_points(
+
+        measurement_points = compute_measurement_points(
             paths=paths,
             ordered_indices=ordered,
             geo_min=args.geo_min,
@@ -122,9 +126,22 @@ def cmd_export_svg(args: argparse.Namespace) -> None:
             offsets=MeasurementOffsets(dx=args.measure_dx, dy=args.measure_dy),
             prefer_y=args.prefer_y,
         )
-        export_measurement_points_svg(measurement, args.output)
-    else:
-        export_rectangles_svg(paths, args.output)
+
+        # Optional: generate measurement diagonals
+        measurement_lines = [
+            (p.x, p.y, q.x, q.y)
+            for p, q in zip(
+                list(measurement_points.values())[:-1],
+                list(measurement_points.values())[1:],
+            )
+        ]
+
+    export_svg_unified(
+        paths=paths,
+        out_path=args.output,
+        measurement_points=measurement_points,
+        measurement_lines=measurement_lines,
+    )
 
 
 def cmd_measure(args: argparse.Namespace) -> None:
