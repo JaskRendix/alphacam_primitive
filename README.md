@@ -41,10 +41,22 @@ The behavior matches the original macro and is fully covered by tests.
 A simplified and predictable version of the VB `IntersectWithLine` logic.  
 The original macro used bounding boxes — this rewrite does the same.
 
+Supports:
+
+- **Diagonal VB‑style offsets** (default)  
+- **Directional lead‑ins** via `--approach-angle {0,90,180,270}`  
+
+Angles are normalized (e.g. `89.9999 → 90`).
+
 ---
 
 ### Measurement points  
 Placement of measurement points along diagonal intersections, following the same rules as the VB macro.
+
+Strict validation:
+
+- `geo_max` must be **greater** than `geo_min`  
+- `count_per_band` must be **≥ 1**
 
 ---
 
@@ -68,10 +80,14 @@ A command‑line interface mirroring the structure of the original macro:
 - `export-svg`  
 - `serve` (API server)
 
+All commands are fully tested.
+
 ---
 
 ### API (optional)  
 A FastAPI server exposing the same functionality over HTTP.
+
+Export endpoints return files directly using unique temporary filenames, included in the `Content-Disposition` header.
 
 ---
 
@@ -102,12 +118,12 @@ These were tightly coupled to Alphacam and not portable.
 
 ### CLI only
 ```
-pip install alphacam-primitive # not yet published to PyPI
+pip install alphacam-primitive   # not yet published to PyPI
 ```
 
 ### CLI + API
 ```
-pip install "alphacam-primitive[api]" # not yet published to PyPI
+pip install "alphacam-primitive[api]"   # not yet published to PyPI
 ```
 
 ### Development install
@@ -124,10 +140,17 @@ pip install -e .[api]
 alphacam-primitive order --input paths.json
 ```
 
-### Compute in/out points
+### Compute in/out points (diagonal)
+```
+alphacam-primitive inout --input paths.json --in-dx 1 --in-dy 2
+```
+
+### Compute in/out points (directional lead‑in)
 ```
 alphacam-primitive inout --input paths.json --in-dx 2 --in-dy 5 --approach-angle 90
 ```
+
+Valid angles: `0`, `90`, `180`, `270`.
 
 ### Compute measurement points
 ```
@@ -182,6 +205,8 @@ Interactive docs:
 | **POST** | `/measure` | Compute measurement points |
 | **POST** | `/export/dxf` | Export rectangles or measurement points to DXF |
 | **POST** | `/export/svg` | Export unified SVG (rectangles, in/out, measurement points/lines) |
+
+Export endpoints return the generated file directly as a streamed response, with a unique temporary filename included in the `Content-Disposition` header.
 
 ---
 
