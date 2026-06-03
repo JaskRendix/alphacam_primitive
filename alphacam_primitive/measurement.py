@@ -49,18 +49,22 @@ def compute_measurement_points(
     if not path_list or not ordered_indices:
         return {}
 
+    # Validate band parameters
+    if count_per_band < 1:
+        raise ValueError(f"count_per_band must be >= 1 (got {count_per_band})")
+
+    if geo_max <= geo_min:
+        raise ValueError(
+            f"geo_max must be greater than geo_min (got geo_min={geo_min}, geo_max={geo_max})"
+        )
+
     # Map 1-based indices to PathBBox
     index_to_path = {i + 1: p for i, p in enumerate(path_list)}
 
     measurement: dict[int, MeasurementPoint] = {}
 
     # Compute band size similar to VB tempGMCount
-    band_span = (geo_max - geo_min) / max(count_per_band, 1)
-    if band_span <= 0:
-        raise ValueError(
-            f"Invalid band range: geo_min={geo_min}, geo_max={geo_max}, "
-            f"count_per_band={count_per_band} produces band_span={band_span}"
-        )
+    band_span = (geo_max - geo_min) / count_per_band
     current_band_max = geo_min + band_span
 
     current_group_index = 1

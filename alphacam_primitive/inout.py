@@ -50,25 +50,29 @@ def compute_inout_points(
         out_y = path.max_y - offsets.out_dy
         return in_x, in_y, out_x, out_y
 
-    theta = math.radians(approach_angle)
+    # Normalize angle (accept 90.0, 89.9999999, etc.)
+    angle = round(approach_angle % 360)
+
+    if angle not in (0, 90, 180, 270):
+        raise ValueError("approach_angle must be one of 0, 90, 180, 270 degrees")
+
+    theta = math.radians(angle)
     vx = math.cos(theta)
     vy = math.sin(theta)
 
-    # Pick reference point based on angle quadrant
-    if approach_angle % 360 == 0:  # from left → right
+    # Pick reference point based on normalized angle
+    if angle == 0:  # from left → right
         x0 = path.min_x
         y0 = (path.min_y + path.max_y) / 2
-    elif approach_angle % 360 == 90:  # from bottom → up
+    elif angle == 90:  # from bottom → up
         x0 = (path.min_x + path.max_x) / 2
         y0 = path.min_y
-    elif approach_angle % 360 == 180:  # from right → left
+    elif angle == 180:  # from right → left
         x0 = path.max_x
         y0 = (path.min_y + path.max_y) / 2
-    elif approach_angle % 360 == 270:  # from top → down
+    elif angle == 270:  # from top → down
         x0 = (path.min_x + path.max_x) / 2
         y0 = path.max_y
-    else:
-        raise ValueError("approach_angle must be one of 0, 90, 180, 270 degrees")
 
     # Compute points
     in_x = x0 - vx * offsets.in_dx

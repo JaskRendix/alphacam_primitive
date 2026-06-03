@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from alphacam_primitive.api import app
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 
 def sample_paths():
@@ -23,9 +23,10 @@ def test_api_order():
     assert resp.status_code == 200
     data = resp.json()
     assert data["ordered_indices"] == [1, 2]
+    assert "path_band_lengths" in data
 
 
-def test_api_inout():
+def test_api_inout_diagonal():
     resp = client.post(
         "/inout",
         json={
@@ -38,8 +39,48 @@ def test_api_inout():
     )
     assert resp.status_code == 200
     data = resp.json()
+    # Default diagonal behavior: max_x - dx, max_y - dy
     assert data["in"]["x"] == 9.0
     assert data["in"]["y"] == 3.0
+    assert data["out"]["x"] == 7.0
+    assert data["out"]["y"] == 1.0
+
+
+def test_api_inout_with_angle_90():
+    resp = client.post(
+        "/inout",
+        json={
+            "path": sample_paths()[0],
+            "in_dx": 2,
+            "in_dy": 5,
+            "out_dx": 4,
+            "out_dy": 8,
+            "approach_angle": 90,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    # 90° → bottom midpoint (x0=5, y0=0), vy=1
+    # in_y = 0 - 1 * 5 = -5
+    # out_y = 0 - 1 * 8 = -8
+    assert data["in"]["y"] == -5.0
+    assert data["out"]["y"] == -8.0
+
+
+def test_api_inout_invalid_angle():
+    resp = client.post(
+        "/inout",
+        json={
+            "path": sample_paths()[0],
+            "in_dx": 1,
+            "in_dy": 1,
+            "out_dx": 2,
+            "out_dy": 2,
+            "approach_angle": 45,
+        },
+    )
+    assert resp.status_code == 400
+    assert "approach_angle must be one of 0, 90, 180, 270" in resp.text
 
 
 def test_api_measure():
@@ -71,29 +112,33 @@ def test_api_measure_missing_paths():
     assert "No paths provided" in resp.text
 
 
-def test_api_export_dxf_rectangles(tmp_path, monkeypatch):
-    # Force export to a temp directory
-    out_file = tmp_path / "export.dxf"
+def test_api_measure_invalid_range():
+    resp = client.post(
+        "/measure",
+        json={
+            "paths": sample_paths(),
+            "geo_min": 10,
+            "geo_max": 5,
+        },
+    )
+    # compute_measurement_points raises ValueError → FastAPI returns 500
+    assert resp.status_code == 500
+    assert "Internal Server Error" in resp.text
 
-    monkeypatch.chdir(tmp_path)
 
+def test_api_export_dxf_rectangles():
     resp = client.post(
         "/export/dxf",
         json={"paths": sample_paths(), "measure": False},
     )
-
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/dxf"
 
-    assert out_file.exists()
-    text = out_file.read_text()
-    assert "LINE" in text  # rectangles produce LINE entities
+    body = resp.content.decode(errors="ignore")
+    assert "LINE" in body  # rectangles produce LINE entities
 
 
-def test_api_export_dxf_measure(tmp_path, monkeypatch):
-    out_file = tmp_path / "export.dxf"
-    monkeypatch.chdir(tmp_path)
-
+def test_api_export_dxf_measure():
     resp = client.post(
         "/export/dxf",
         json={
@@ -104,36 +149,27 @@ def test_api_export_dxf_measure(tmp_path, monkeypatch):
             "count_per_band": 2,
         },
     )
-
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/dxf"
 
-    assert out_file.exists()
-    text = out_file.read_text()
-    assert "POINT" in text  # measurement points produce POINT entities
+    body = resp.content.decode(errors="ignore")
+    assert "POINT" in body  # measurement points produce POINT entities
 
 
-def test_api_export_svg_rectangles(tmp_path, monkeypatch):
-    out_file = tmp_path / "export.svg"
-    monkeypatch.chdir(tmp_path)
-
+def test_api_export_svg_rectangles():
     resp = client.post(
         "/export/svg",
         json={"paths": sample_paths(), "measure": False},
     )
-
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "image/svg+xml"
 
-    assert out_file.exists()
-    text = out_file.read_text()
+    text = resp.content.decode(errors="ignore")
+    assert "<svg" in text
     assert "<rect" in text
 
 
-def test_api_export_svg_measure(tmp_path, monkeypatch):
-    out_file = tmp_path / "export.svg"
-    monkeypatch.chdir(tmp_path)
-
+def test_api_export_svg_measure():
     resp = client.post(
         "/export/svg",
         json={
@@ -144,10 +180,9 @@ def test_api_export_svg_measure(tmp_path, monkeypatch):
             "count_per_band": 2,
         },
     )
-
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "image/svg+xml"
 
-    assert out_file.exists()
-    text = out_file.read_text()
+    text = resp.content.decode(errors="ignore")
+    assert "<svg" in text
     assert "<circle" in text

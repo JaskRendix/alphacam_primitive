@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +89,15 @@ def api_order(paths: list[PathBBoxModel], prefer_y: bool = False) -> dict[str, A
 @app.post("/inout")
 def api_inout(req: InOutRequest) -> dict[str, Any]:
     """Compute in/out points for a single path."""
+
+    if req.approach_angle is not None:
+        angle = round(req.approach_angle % 360)
+        if angle not in (0, 90, 180, 270):
+            raise HTTPException(
+                status_code=400,
+                detail="approach_angle must be one of 0, 90, 180, 270 degrees",
+            )
+
     offsets = InOutOffsets(
         in_dx=req.in_dx,
         in_dy=req.in_dy,
@@ -98,7 +108,7 @@ def api_inout(req: InOutRequest) -> dict[str, Any]:
     in_x, in_y, out_x, out_y = compute_inout_points(
         PathBBox(**req.path.model_dump()),
         offsets,
-        approach_angle=req.approach_angle,  # ← NEW
+        approach_angle=req.approach_angle,
     )
 
     return {
@@ -138,7 +148,8 @@ def api_measure(req: MeasureRequest) -> dict[str, dict[str, dict[str, Any]]]:
 def api_export_dxf(req: ExportRequest) -> FileResponse:
     """Export rectangles or measurement points to DXF."""
     bboxes = [PathBBox(**p.model_dump()) for p in req.paths]
-    out_path = "export.dxf"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".dxf")
+    out_path = Path(tmp.name)
 
     if req.measure:
         if req.geo_min is None or req.geo_max is None:
@@ -165,7 +176,8 @@ def api_export_dxf(req: ExportRequest) -> FileResponse:
 def api_export_svg(req: ExportRequest) -> FileResponse:
     """Export rectangles or measurement points to SVG."""
     bboxes = [PathBBox(**p.model_dump()) for p in req.paths]
-    out_path = "export.svg"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".svg")
+    out_path = Path(tmp.name)
 
     measurement_points = None
     measurement_lines = None

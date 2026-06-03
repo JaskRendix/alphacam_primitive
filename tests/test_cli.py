@@ -282,3 +282,128 @@ def test_cli_export_svg_measure(tmp_path):
     assert result.returncode == 0
     text = out.read_text()
     assert "<circle" in text
+
+
+def test_cli_inout_with_angle(tmp_path):
+    paths = write_paths(tmp_path)
+    result = subprocess.run(
+        [
+            "alphacam-primitive",
+            "inout",
+            "--input",
+            str(paths),
+            "--in-dx",
+            "2",
+            "--in-dy",
+            "5",
+            "--out-dx",
+            "4",
+            "--out-dy",
+            "8",
+            "--approach-angle",
+            "90",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    out = json.loads(result.stdout)
+
+    # 90° → bottom midpoint (x0=5, y0=0)
+    assert out["in"]["y"] == -5.0
+    assert out["out"]["y"] == -8.0
+
+
+def test_cli_inout_invalid_angle(tmp_path):
+    paths = write_paths(tmp_path)
+    result = subprocess.run(
+        [
+            "alphacam-primitive",
+            "inout",
+            "--input",
+            str(paths),
+            "--approach-angle",
+            "45",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "invalid choice" in result.stderr.lower()
+
+
+def test_cli_inout_invalid_index(tmp_path):
+    paths = write_paths(tmp_path)
+
+    # index too small
+    result = subprocess.run(
+        ["alphacam-primitive", "inout", "--input", str(paths), "--index", "0"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "index must be between" in result.stderr.lower()
+
+    # index too large
+    result = subprocess.run(
+        ["alphacam-primitive", "inout", "--input", str(paths), "--index", "999"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "index must be between" in result.stderr.lower()
+
+
+def test_cli_measure_invalid_params(tmp_path):
+    paths = write_paths(tmp_path)
+
+    # invalid count_per_band
+    result = subprocess.run(
+        [
+            "alphacam-primitive",
+            "measure",
+            "--input",
+            str(paths),
+            "--geo-min",
+            "0",
+            "--geo-max",
+            "10",
+            "--count-per-band",
+            "0",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+
+    # invalid geo range
+    result = subprocess.run(
+        [
+            "alphacam-primitive",
+            "measure",
+            "--input",
+            str(paths),
+            "--geo-min",
+            "10",
+            "--geo-max",
+            "5",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+
+
+def test_cli_missing_input_file(tmp_path):
+    missing = tmp_path / "does_not_exist.json"
+
+    result = subprocess.run(
+        ["alphacam-primitive", "order", "--input", str(missing)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "No such file" in result.stderr or "cannot open" in result.stderr.lower()

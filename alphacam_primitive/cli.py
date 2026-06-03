@@ -63,7 +63,15 @@ def cmd_inout(args: argparse.Namespace) -> None:
     if not paths:
         raise SystemExit("No paths in input")
 
-    p = paths[0] if args.index is None else paths[args.index - 1]
+    # Validate index (1‑based)
+    if args.index is None:
+        p = paths[0]
+    else:
+        if args.index < 1 or args.index > len(paths):
+            raise SystemExit(
+                f"--index must be between 1 and {len(paths)} (got {args.index})"
+            )
+        p = paths[args.index - 1]
 
     offsets = InOutOffsets(
         in_dx=args.in_dx,
