@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterable
 
 from ..geometry import PathBBox
 from ..measurement import MeasurementPoint
@@ -48,7 +48,7 @@ def export_rectangles(
 
 
 def export_measurement_points(
-    points: Dict[int, MeasurementPoint],
+    points: dict[int, MeasurementPoint],
     out_path: Path,
 ) -> None:
     """

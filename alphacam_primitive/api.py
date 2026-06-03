@@ -47,6 +47,7 @@ class InOutRequest(BaseModel):
     in_dy: float = 0.0
     out_dx: float = 0.0
     out_dy: float = 0.0
+    approach_angle: float | None = None
 
 
 class MeasureRequest(BaseModel):
@@ -93,9 +94,13 @@ def api_inout(req: InOutRequest) -> dict[str, Any]:
         out_dx=req.out_dx,
         out_dy=req.out_dy,
     )
+
     in_x, in_y, out_x, out_y = compute_inout_points(
-        PathBBox(**req.path.model_dump()), offsets
+        PathBBox(**req.path.model_dump()),
+        offsets,
+        approach_angle=req.approach_angle,  # ← NEW
     )
+
     return {
         "path_name": req.path.name,
         "in": {"x": in_x, "y": in_y},

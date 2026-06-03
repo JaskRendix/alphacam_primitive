@@ -64,18 +64,26 @@ def cmd_inout(args: argparse.Namespace) -> None:
         raise SystemExit("No paths in input")
 
     p = paths[0] if args.index is None else paths[args.index - 1]
+
     offsets = InOutOffsets(
         in_dx=args.in_dx,
         in_dy=args.in_dy,
         out_dx=args.out_dx,
         out_dy=args.out_dy,
     )
-    in_x, in_y, out_x, out_y = compute_inout_points(p, offsets)
+
+    in_x, in_y, out_x, out_y = compute_inout_points(
+        p,
+        offsets,
+        approach_angle=args.approach_angle,  # ← NEW
+    )
+
     out = {
         "path_name": p.name,
         "in": {"x": in_x, "y": in_y},
         "out": {"x": out_x, "y": out_y},
     }
+
     if args.output:
         args.output.write_text(json.dumps(out, indent=2))
     else:
@@ -213,6 +221,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_inout.add_argument("--in-dy", type=float, default=0.0)
     p_inout.add_argument("--out-dx", type=float, default=0.0)
     p_inout.add_argument("--out-dy", type=float, default=0.0)
+    p_inout.add_argument(
+        "--approach-angle",
+        type=float,
+        choices=[0, 90, 180, 270],
+        help="Optional lead-in angle (0, 90, 180, 270 degrees). "
+        "If omitted, diagonal VB-style behavior is used.",
+    )
     p_inout.set_defaults(func=cmd_inout)
 
     # measure

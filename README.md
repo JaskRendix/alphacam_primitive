@@ -126,7 +126,7 @@ alphacam-primitive order --input paths.json
 
 ### Compute in/out points
 ```
-alphacam-primitive inout --input paths.json --in-dx 1 --in-dy 2
+alphacam-primitive inout --input paths.json --in-dx 2 --in-dy 5 --approach-angle 90
 ```
 
 ### Compute measurement points
@@ -202,7 +202,8 @@ Interactive docs:
   "in_dx": 1,
   "in_dy": 2,
   "out_dx": 3,
-  "out_dy": 4
+  "out_dy": 4,
+  "approach_angle": 90
 }
 ```
 
