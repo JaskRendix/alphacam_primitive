@@ -11,8 +11,12 @@ license = { file = "LICENSE" }
 api = [
     "fastapi",
     "uvicorn",
-    "httpx",
     "pydantic"
+]
+
+test = [
+    "httpx",
+    "pytest"
 ]
 
 [project.scripts]
