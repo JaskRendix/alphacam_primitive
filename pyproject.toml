@@ -16,7 +16,8 @@ api = [
 
 test = [
     "httpx",
-    "pytest"
+    "pytest",
+    "pytest-cov",
 ]
 
 [project.scripts]
@@ -32,3 +33,6 @@ package-dir = {"" = "."}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["alphacam_primitive*"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=alphacam_primitive --cov-report=term-missing"
